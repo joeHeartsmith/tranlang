@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 
-# Updated prototype.  Uses actual HTML parsing, and exempts code blocks from translation.  Still only updates hyperlinks.
+# Updated prototype.  Uses actual HTML parsing, and exempts code blocks from translation.
+# Performs translation via DeepL Free API, but language has to be manually set.
 
-import os
+import os, requests, json
 from html.parser import HTMLParser
 
+# Language Settings
+target_lang = 'FI'  # This will be populated by the HTTP Accept-Language sent by the client's browser
+auth_key = '7ecc9ecc-2f15-119d-e6c3-fac982730290:fx'
+url = 'https://api-free.deepl.com/v2/translate?auth_key=' + auth_key
+hdr = {'User-Agent': 'tranlang-CGI'}
+
+# Content Location Settings
 pathprefix = '/var/www/html/quickstart/public/'
 docroot = 'index.html'
 pagearg = 'page'
@@ -49,7 +57,12 @@ class docparser(HTMLParser):
 
     def handle_data(self, data):
         if len(data.strip()) > 0 and 'XXXPAGECODEFLAGXXX' not in data:
-            print('(TRANSLATE!) {}'.format(data), end='')
+            # Add condition here to determine if translation is even necessary
+            data = {'auth_key': auth_key, 'text': data, 'target_lang': target_lang}
+            request = requests.post('https://api-free.deepl.com/v2/translate', data=data, headers=hdr)
+            result = json.loads(request.content)["translations"][0]["text"]
+
+            print('{}'.format(result), end='')
         else:
             print('{}'.format(data).replace('XXXPAGECODEFLAGXXX', ''), end='')
 
@@ -58,13 +71,17 @@ class docparser(HTMLParser):
 # TODO: add handle_pi, handle_charref, handle_entityref, and unknown_decl methods
 parser = docparser()
 
+# Get content
 l = f.read()
 f.close()
 
+# Prep <code> blocks
 page_render = l.replace('<code>', '<code> XXXPAGECODEFLAGXXX')
 
+# Start Connection; send HTTP Headers
 # TODO: Fill HTTP header fields (especially 'Content-Language')
 print('Content-Type: text/html')
 print()
 
+# Send (translated) content back
 parser.feed(page_render)
