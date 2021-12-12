@@ -10,6 +10,10 @@ from urllib.parse import parse_qs
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+auth_key = '7ecc9ecc-2f15-119d-e6c3-fac982730290:fx'
+url = 'https://api-free.deepl.com/v2/translate?auth_key=' + auth_key
+hdr = {'User-Agent': 'tranlang-CGI'}
+
 pathprefix = '/var/www/html/quickstart/public/'
 docroot = 'index.html'
 pagearg = 'page'
@@ -20,30 +24,25 @@ try:
     qs_page = qs['page'][0]
 except:
     qs_page = 'index.html'
+content = str(pathprefix + qs_page).replace('//','/')
 
 try:
     qs = parse_qs(qs=os.environ.get('QUERY_STRING'), keep_blank_values=False, strict_parsing=False, encoding='utf-8', errors='replace', max_num_fields=None)
     qs_lang = qs['lang'][0]
 except:
     qs_lang = 'EN'
+target_lang = qs_lang    # This will be populated by the HTTP Accept-Language sent by the client's browser
 
 try:
     thisscript = str(os.environ.get('SCRIPT_NAME'))
 except:
     thisscript = 'tranlang.cgi'
 
-content = str(pathprefix + qs_page).replace('//','/')
-
 try:
     f = open(content, 'r')
 except:
     content = pathprefix + 'index.html'
     f = open(content, 'r')
-
-target_lang = qs_lang    # This will be populated by the HTTP Accept-Language sent by the client's browser
-auth_key = '7ecc9ecc-2f15-119d-e6c3-fac982730290:fx'
-url = 'https://api-free.deepl.com/v2/translate?auth_key=' + auth_key
-hdr = {'User-Agent': 'tranlang-CGI'}
 
 class docparser(HTMLParser):
     def handle_starttag(self, tag, attrs):
