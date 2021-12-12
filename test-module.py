@@ -10,7 +10,7 @@ from urllib.parse import parse_qs
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-auth_key = '7ecc9ecc-2f15-119d-e6c3-fac982730290:fx'
+auth_key = 'XXX'
 url = 'https://api-free.deepl.com/v2/translate?auth_key=' + auth_key
 hdr = {'User-Agent': 'tranlang-CGI'}
 
@@ -43,6 +43,8 @@ try:
 except:
     content = pathprefix + 'index.html'
     f = open(content, 'r')
+l = f.read()
+f.close()
 
 class docparser(HTMLParser):
     def handle_starttag(self, tag, attrs):
@@ -72,9 +74,9 @@ class docparser(HTMLParser):
             if target_lang.upper() == 'EN':
                 result = data
             else:
-                data = {'auth_key': auth_key, 'text': data, 'target_lang': target_lang}
-                request = requests.post('https://api-free.deepl.com/v2/translate', data=data, headers=hdr)
-                result = json.loads(request.content)["translations"][0]["text"]
+                rest_data = {'auth_key': auth_key, 'text': data, 'target_lang': target_lang}
+                request = requests.post('https://api-free.deepl.com/v2/translate', data=rest_data, headers=hdr)
+                result = json.loads(request.content)["translations"][0]["text"]  # TODO: add exception-handling here
 
             print('{}'.format(result), end='')
         else:
@@ -84,9 +86,6 @@ class docparser(HTMLParser):
         print('<!{}>'.format(data), end='')
 # TODO: add handle_pi, handle_charref, handle_entityref, and unknown_decl methods
 parser = docparser()
-
-l = f.read()
-f.close()
 
 page_render = l.replace('<code>', '<code> XXXPAGECODEFLAGXXX')
 
