@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 # Updated prototype.  Uses actual HTML parsing, and exempts code blocks from translation.
-# Performs translation via DeepL Free API, but language has to be manually set via the URL 'lang=' query string.
+# Performs translation via DeepL Free API, then by Google Cloud Translate API,
+# but language has to be manually set via the URL 'lang=' query string.
 
 import sys, os, requests, json
 from html.parser import HTMLParser
@@ -10,9 +11,10 @@ from urllib.parse import parse_qs
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-auth_key = 'XXX'
-url = 'https://api-free.deepl.com/v2/translate?auth_key=' + auth_key
-hdr = {'User-Agent': 'tranlang-CGI'}
+# https://www.deepl.com/docs-api/translating-text/
+lang_list_deepl = ['BG','CS','DA','DE','EL','EN-GB','EN-US','EN','ES','ET','FI','FR','HU','IT','JA','LT','LV','NL','PL','PT-PT','PT-BR','PT','RO','RU','SK','SL','SV','ZH']
+# https://cloud.google.com/translate/docs/languages
+lang_list_google = ['af','sq','am','ar','hy','az','eu','be','bn','bs','bg','ca','ceb','zh-CN','zh-TW','co','hr','cs','da','nl','eo','et','fi','fr','fy','gl','ka','de','el','gu','ht','ha','haw','he','iw','hi','hmn','hu','is','ig','id','ga','it','ja','jv','kn','kk','km','rw','ko','ku','ky','lo','lv','lt','lb','mk','mg','ms','ml','mt','mi','mr','mn','my','ne','no','ny','or','ps','fa','pl','pt','pa','ro','ru','sm','gd','sr','st','sn','sd','si','sk','sl','so','es','su','sw','sv','tl','tg','ta','tt','te','th','tr','tk','uk','ur','ug','uz','vi','cy','xh','yi','yo','zu']
 
 pathprefix = '/var/www/html/quickstart/public/'
 docroot = 'index.html'
@@ -46,6 +48,35 @@ except:
 l = f.read()
 f.close()
 
+
+def translateText(source_string, target_lang):
+    hdr = {'User-Agent': 'tranlang-CGI'}
+
+    if target_lang.upper() in lang_list_deepl:
+        translation_engine = 'DeepL'
+    elif target_lang.lower() in lang_list_google:
+        translation_engine = 'Google'
+    else:
+        target_lang = 'EN'
+
+    if translation_engine == 'Google':
+        auth_key = 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        translate_api_url = 'https://www.googleapis.com/language/translate/v2?key=' + auth_key
+    elif translation_engine == 'DeepL':
+        auth_key = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xx'
+        translate_api_url = 'https://api-free.deepl.com/v2/translate?auth_key=' + auth_key
+
+    if translation_engine == 'Google':
+        rest_data = {'auth_key': auth_key, 'text': source_string, 'target_lang': target_lang.lower()}
+        request = requests.post(translate_api_url + '&source=en&target=' + target_lang.lower() + '&q=' + source_string, data=None, headers=hdr)
+        result = json.loads(request.content)['data']['translations'][0]['translatedText']
+    elif translation_engine == 'DeepL':
+        rest_data = {'auth_key': auth_key, 'text': source_string, 'target_lang': target_lang.upper()}
+        request = requests.post('https://api-free.deepl.com/v2/translate', data=rest_data, headers=hdr)
+        result = json.loads(request.content)["translations"][0]["text"]
+    return result
+
+
 class docparser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         print('<{}'.format(tag), end='')
@@ -71,13 +102,15 @@ class docparser(HTMLParser):
 
     def handle_data(self, data):
         if len(data.strip()) > 0 and 'XXXPAGECODEFLAGXXX' not in data:
-            if target_lang.upper() == 'EN':
+            notranslate = False
+            if target_lang.upper() not in lang_list_deepl:
+                if target_lang.lower() not in lang_list_google:
+                    notranslate = True
+
+            if target_lang.upper() == 'EN' or notranslate == True:
                 result = data
             else:
-                rest_data = {'auth_key': auth_key, 'text': data, 'target_lang': target_lang}
-                request = requests.post('https://api-free.deepl.com/v2/translate', data=rest_data, headers=hdr)
-                result = json.loads(request.content)["translations"][0]["text"]  # TODO: add exception-handling here
-
+                result = translateText(data, target_lang)
             print('{}'.format(result), end='')
         else:
             print('{}'.format(data).replace('XXXPAGECODEFLAGXXX', ''), end='')
