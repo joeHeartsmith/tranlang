@@ -5,7 +5,7 @@ Renders statically-generated HTML content, and dynamically translates content to
 
 ### TODO:
 - _Page caching_  - All pages are still re-translated on every load.
-- _Data chunking_ - DeepL limits REST calls to 150k characters.  These requests need to be broken-up on the sentence boundary.
+- _Data chunking_ - DeepL limits REST calls to 15k characters.  These requests need to be broken-up on the sentence boundary.
 - _Page toolbar_  - The toolbar is missing functionality and graphics.
 - _Robots tool_   - Generate robots.txt for all translation combinations so web crawlers can index pre-translated content.
 
