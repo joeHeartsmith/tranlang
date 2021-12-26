@@ -17,7 +17,7 @@
 #            is presented.
 #
 # TODO:      Page caching  - All pages are still re-translated on every load.
-#            Data chunking - DeepL limits REST calls to 150k characters.
+#            Data chunking - DeepL limits REST calls to 15k characters.
 #                            These requests need to be broken-up on the
 #                            sentence boundary.
 #            Page toolbar  - The toolbar is missing functionality and graphics.
