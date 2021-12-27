@@ -67,42 +67,40 @@ lang_list_google = ['af','sq','am','ar','hy','az','eu','be','bn','bs','bg','ca',
 #   TODO: This doesn't really work with Firefox, as it just sends a bunch of 'en-US'
 #         to the server.  Works with Chrome.
 translation_engine = 'None'
-try:
-    accept_lang_qs = parse_qs(qs=os.environ.get('HTTP_ACCEPT_LANGUAGE'), keep_blank_values=False, strict_parsing=False, encoding='utf-8', errors='replace', max_num_fields=None)
 
+accept_lang = 'EN'
+try:
+    accept_lang_qs = os.environ.get('HTTP_ACCEPT_LANGUAGE')
     stop = False
-    for langs in accept_lang_qs['q']:
+    for langs in accept_lang_qs.split(','):
         if stop == False:
-            if ',' in langs:
-                if 'INVALID' not in deepl_api_auth_key:
-                    if langs.split(',')[1] in lang_list_deepl:
-                        accept_lang = langs.split(',')[1]
-                        translation_engine = 'DeepL'
-                        stop = True
-                    if langs.split(',')[1][0:1] in lang_list_deepl and stop == False:
-                        accept_lang = langs.split(',')[1][0:1]
-                        translation_engine = 'DeepL'
-                        stop = True
-                if 'INVALID' not in google_api_auth_key:
-                    if langs.split(',')[1] in lang_list_google:
-                        accept_lang = langs.split(',')[1]
-                        translation_engine = 'Google'
-                        stop = True
-                    if langs.split(',')[1][0:1] in lang_list_google and stop == False:
-                        accept_lang = langs.split(',')[1][0:1]
-                        translation_engine = 'Google'
-                        stop = True
-            else:
-                accept_lang = 'EN'
-                stop = True
+            if 'INVALID' not in deepl_api_auth_key:
+                if langs.rstrip(';q=.0123456789').upper() in lang_list_deepl:
+                    accept_lang = langs.rstrip(';q=.0123456789')
+                    translation_engine = 'DeepL'
+                    stop = True
+                if langs.rstrip(';q=.0123456789').upper()[0:1] in lang_list_deepl and stop == False:
+                    accept_lang = langs.rstrip(';q=.0123456789')[0:2]
+                    translation_engine = 'DeepL'
+                    stop = True
+            if 'INVALID' not in google_api_auth_key:
+                if langs.rstrip(';q=.0123456789').lower() in lang_list_google:
+                    accept_lang = langs.rstrip(';q=.0123456789')
+                    translation_engine = 'Google'
+                    stop = True
+                if langs.rstrip(';q=.0123456789').lower()[0:2] in lang_list_google and stop == False:
+                    accept_lang = langs.rstrip(';q=.0123456789')[0:2]
+                    translation_engine = 'Google'
+                    stop = True
+        else:
+            stop = True
 except:
-    accept_lang = 'en'
+    accept_lang = 'en'  # Should catch none or 'Accept-Language: *'
 
 ### Fetch the requested page.  Try to prevent directory traversals,
 #   and just fetch the default document if unavailable.
 #
 #   TODO: Improve protection against directory traversal attacks
-#         Add file caching support
 try:
     qs = parse_qs(qs=os.environ.get('QUERY_STRING'), keep_blank_values=False, strict_parsing=False, encoding='utf-8', errors='replace', max_num_fields=None)
     qs_page = qs['page'][0].replace('..','.')
@@ -280,9 +278,9 @@ def render_toolbar():
 #   of the requested content.  Read into memory.
 
 outfile = sys.stdout
-cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang
+cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang.lower()
 if qs_spec == False:
-    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang
+    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang.lower()
 
 cache_stale = False
 try:
