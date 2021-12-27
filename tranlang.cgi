@@ -31,8 +31,8 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs
 
 ### Configuration
-deepl_api_auth_key = 'INVALID_API_KEY'                            # API key for DeepL Free/Pro
-google_api_auth_key = 'INVALID_API_KEY'                           # API key for Google Cloud Translate
+deepl_api_auth_key = 'INVALID_API_KEY'                             # API key for DeepL Free/Pro
+google_api_auth_key = 'INVALID_API_KEY'                            # API key for Google Cloud Translate
 pathprefix = '/var/www/html/quickstart/public/'                    # Physical location on-disk for HTML content
 docroot = 'index.html'                                             # Default homepage to display when no content is requested
 pagearg = 'page'                                                   # URL Query String Parameter name to specify which page to supply
@@ -194,7 +194,10 @@ class docparser(HTMLParser):
                 if tag == str('a'):
                     if attr[0] == str('href'):
                         if link_keyword in attr[1] or attr[1] == "/":
-                            print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot + '&lang=' + target_lang), end='', file=outfile)
+                            if qs_spec == True:
+                                print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot + '&lang=' + target_lang), end='', file=outfile)
+                            else:
+                                print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot), end='', file=outfile)
                             stop = True
                 if stop != True:
                         print(' {}="{}" '.format(attr[0], attr[1]), end='', file=outfile)
@@ -278,7 +281,7 @@ def render_toolbar():
 
 outfile = sys.stdout
 cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang
-if accept_lang.lower() != 'en':
+if qs_spec == False:
     cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang
 
 cache_stale = False
