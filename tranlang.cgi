@@ -278,6 +278,9 @@ def render_toolbar():
 
 outfile = sys.stdout
 cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang
+if accept_lang.lower() != 'en':
+    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang
+
 cache_stale = False
 try:
     cachefile_age = os.path.getmtime(cachefile)
