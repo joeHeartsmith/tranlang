@@ -16,30 +16,34 @@
 #            at the top of the page to give them control over which language
 #            is presented.
 #
-# TODO:      Page caching  - All pages are still re-translated on every load.
-#            Data chunking - DeepL limits REST calls to 15k characters.
+# TODO:      Data chunking - DeepL limits REST calls to 150k characters.
 #                            These requests need to be broken-up on the
 #                            sentence boundary.
 #            Page toolbar  - The toolbar is missing functionality and graphics.
 #            Robots tool   - Generate robots.txt for all translation combinations
 #                            so web crawlers can index pre-translated content.
 #
-#  Version 0.1 (26 December 2021)
+#  Version 0.2 (27 December 2021)
 #
 
-import sys, os, requests, json
+import json, os, requests, sys
 from html.parser import HTMLParser
 from urllib.parse import parse_qs
 
 ### Configuration
-deepl_api_auth_key = 'INVALID_API_KEY'                             # API key for DeepL Free/Pro
-google_api_auth_key = 'INVALID_API_KEY'                            # API key for Google Cloud Translate
+deepl_api_auth_key = 'f2abef53-69e3-c509-041d-ad1ae41fdb06:fx'     # API key for DeepL Free/Pro
+google_api_auth_key = 'AIzaSyBrna6DEjPTHrdfiPoRTDLR6XngExiFqRM'    # API key for Google Cloud Translate
+
+#deepl_api_auth_key = 'INVALID_API_KEY'                            # API key for DeepL Free/Pro
+#google_api_auth_key = 'INVALID_API_KEY'                           # API key for Google Cloud Translate
 pathprefix = '/var/www/html/quickstart/public/'                    # Physical location on-disk for HTML content
 docroot = 'index.html'                                             # Default homepage to display when no content is requested
 pagearg = 'page'                                                   # URL Query String Parameter name to specify which page to supply
 link_keyword = 'posts'                                             # Keyword common to all hyperlinks which will need to be re-written
 codeblock_flag = 'XXXPAGECODEFLAGXXX'                              # Keyword to identify non-translatable HTML code blocks
 scrub_comments = False                                             # Option to remove comments from generated HTML content
+cachedir = 'tranlang-cache'                                        # Directory to store cache files in
+cachename_prefix = 'tr-cache_'                                     # String to prepend to cached filenames
 ###
 
 # List of available languages from DeepL.  Updated from https://www.deepl.com/docs-api/translating-text/
@@ -141,15 +145,6 @@ try:
 except:
     thisscript = 'tranlang.cgi'
 
-### Read desired content from disk.
-try:
-    f = open(content, 'r')
-except:
-    content = pathprefix + docroot
-    f = open(content, 'r')
-l = f.read()
-f.close()
-
 ################################################################################
 
 ##### HELPER FUNCTIONS
@@ -194,28 +189,28 @@ def translateText(source_string, target_lang):
 class docparser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if str('html') in tag.lower():
-            print('', end='')
+            print('', end='', file=outfile)
         else:
-            print('<{}'.format(tag), end='')
+            print('<{}'.format(tag), end='', file=outfile)
             for attr in attrs:
                 stop = False
                 if tag == str('a'):
                     if attr[0] == str('href'):
                         if link_keyword in attr[1] or attr[1] == "/":
-                            print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot + '&lang=' + target_lang), end='')
+                            print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot + '&lang=' + target_lang), end='', file=outfile)
                             stop = True
                 if stop != True:
-                        print(' {}="{}" '.format(attr[0], attr[1]), end='')
-            print('>', end='')
+                        print(' {}="{}" '.format(attr[0], attr[1]), end='', file=outfile)
+            print('>', end='', file=outfile)
 
     def handle_endtag(self, tag):
-        print('</{}>'.format(tag), end='')
+        print('</{}>'.format(tag), end='', file=outfile)
 
     def handle_startendtag(self, tag, attrs):
-        print('<{}'.format(tag), end='')
+        print('<{}'.format(tag), end='', file=outfile)
         for attr in attrs:
-            print(' {}="{}"'.format(attr[0], attr[1]), end='')
-        print(' />', end='')
+            print(' {}="{}"'.format(attr[0], attr[1]), end='', file=outfile)
+        print(' />', end='', file=outfile)
 
     def handle_data(self, data):
         if len(data.strip()) > 0 and codeblock_flag not in data:
@@ -230,26 +225,26 @@ class docparser(HTMLParser):
                 result = data
             else:
                 result = translateText(data, target_lang)
-            print('{}'.format(result), end='')
+            print('{}'.format(result), end='', file=outfile)
         else:
-            print('{}'.format(data).replace(codeblock_flag, ''), end='')
+            print('{}'.format(data).replace(codeblock_flag, ''), end='', file=outfile)
 
     def handle_decl(self, data):
         if str('DOCTYPE') in data:
-            print('', end='')
+            print('', end='', file=outfile)
         else:
-            print('<!{}>'.format(data), end='')
+            print('<!{}>'.format(data), end='', file=outfile)
 
     def handle_pi(self, data):
-        print('<?{}>'.format(data), end='')
+        print('<?{}>'.format(data), end='', file=outfile)
 
     def handle_comment(self, data):
         if scrub_comments == True:
-            print('<! COMMENT SCRUBBED -->')
+            print('<! COMMENT SCRUBBED -->', file=outfile)
         else:
-            print('<! {}>'.format(data), end='')
+            print('<! {}>'.format(data), end='', file=outfile)
     def unknown_decl(self, data):
-        print('<!{}>'.format(data), end='')
+        print('<!{}>'.format(data), end='', file=outfile)
 
 parser = docparser(convert_charrefs=True)
 
@@ -271,6 +266,7 @@ def render_toolbar():
     print('target_lang = "' + target_lang + '"</br>', end='')
     print('client_lang = "' + accept_lang + '"</br>', end='')
     print('translation_engine = "' + translation_engine + '"</br>', end='')
+    print('cached = "' + str(cache_available) + '"</br>', end='')
     print('page = "' + content[13:] + '"', end='')
     print('</h5>')
     print('</div>')
@@ -278,6 +274,36 @@ def render_toolbar():
     print()
 
 ################################################################################
+
+### Page reading
+#   Determine whether the page has already been translated, and fetch the latest version
+#   of the requested content.  Read into memory.
+
+outfile = sys.stdout
+cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang
+cache_stale = False
+try:
+    cachefile_age = os.path.getmtime(cachefile)
+    cache_available = True
+except:
+    cache_available = False
+
+try:
+    content_age = os.path.getmtime(content)
+    content_available = True
+    f = open(content, 'r')
+except:
+    content = pathprefix + docroot
+    content_available = False
+    f = open(content, 'r')
+
+if cache_available == True and content_available == True:
+    if content_age >= cachefile_age:
+        cache_stale = True
+
+l = f.read()
+f.close()
+
 
 ### Page rendering
 #   Renders a new HTML page for the user.  Digs out HTML <code> blocks, delivers HTTP headers to
@@ -304,5 +330,15 @@ print()
 if hide_toolbar == False:
     render_toolbar()
 
-# Deliver translated page Content
-parser.feed(page_render)
+# Check if cache file is available and if it's not stale, and render + deliver content
+if cache_available == False or cache_stale == True:
+    outfile = open(cachefile, 'w')
+    parser.feed(page_render)
+    outfile.close()
+else:
+    outfile = sys.stdout
+
+f = open(cachefile, 'r')
+l = f.read()
+f.close()
+print(l)
