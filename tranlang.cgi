@@ -31,11 +31,8 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs
 
 ### Configuration
-deepl_api_auth_key = 'f2abef53-69e3-c509-041d-ad1ae41fdb06:fx'     # API key for DeepL Free/Pro
-google_api_auth_key = 'AIzaSyBrna6DEjPTHrdfiPoRTDLR6XngExiFqRM'    # API key for Google Cloud Translate
-
-#deepl_api_auth_key = 'INVALID_API_KEY'                            # API key for DeepL Free/Pro
-#google_api_auth_key = 'INVALID_API_KEY'                           # API key for Google Cloud Translate
+deepl_api_auth_key = 'INVALID_API_KEY'                            # API key for DeepL Free/Pro
+google_api_auth_key = 'INVALID_API_KEY'                           # API key for Google Cloud Translate
 pathprefix = '/var/www/html/quickstart/public/'                    # Physical location on-disk for HTML content
 docroot = 'index.html'                                             # Default homepage to display when no content is requested
 pagearg = 'page'                                                   # URL Query String Parameter name to specify which page to supply
