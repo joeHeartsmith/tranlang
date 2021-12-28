@@ -44,7 +44,7 @@ lang_list_deepl = ['BG','CS','DA','DE','EL','ES','ET','FI','FR','HU','IT','JA',
                    'SV','ZH']
 # List of available languages from Google.  Updated from https://cloud.google.com/translate/docs/languages
 lang_list_google = ['af','sq','am','ar','hy','az','eu','be','bn','bs','bg','ca',
-                    'ceb','zh-CN','zh-TW','co','hr','cs','da','nl','eo','et','fi',
+                    'ceb','co','hr','cs','da','nl','eo','et','fi',
                     'fr','fy','gl','ka','de','el','gu','ht','ha','haw','he','iw',
                     'hi','hmn','hu','is','ig','id','ga','it','ja','jv','kn','kk',
                     'km','rw','ko','ku','ky','lo','lv','lt','lb','mk','mg','ms',
