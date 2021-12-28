@@ -16,14 +16,10 @@
 #            at the top of the page to give them control over which language
 #            is presented.
 #
-# TODO:      Data chunking - DeepL limits REST calls to 150k characters.
-#                            These requests need to be broken-up on the
-#                            sentence boundary.
-#            Page toolbar  - The toolbar is missing functionality and graphics.
 #            Robots tool   - Generate robots.txt for all translation combinations
 #                            so web crawlers can index pre-translated content.
 #
-#  Version 0.21 (28 December 2021)
+#  Version 0.9 (28 December 2021)
 #
 
 import json, os, requests, sys
@@ -31,9 +27,8 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs
 
 ### Configuration
-deepl__auth_key = 'INVALID_API_KEY'                             # API key for DeepL Free/Pro
+deepl_api_auth_key = 'INVALID_API_KEY'                             # API key for DeepL Free/Pro
 google_api_auth_key = 'INVALID_API_KEY'                            # API key for Google Cloud Translate
-
 pathprefix = '/var/www/html/quickstart/public/'                    # Physical location on-disk for HTML content
 docroot = 'index.html'                                             # Default homepage to display when no content is requested
 pagearg = 'page'                                                   # URL Query String Parameter name to specify which page to supply
@@ -59,6 +54,14 @@ lang_list_google = ['af','sq','am','ar','hy','az','eu','be','bn','bs','bg','ca',
                     'pl','pt','pa','ro','ru','sm','gd','sr','st','sn','sd','si',
                     'sk','sl','so','es','su','sw','sv','tl','tg','ta','tt','te',
                     'th','tr','tk','uk','ur','ug','uz','vi','cy','xh','yi','yo','zu']
+
+# Aggregated sorted list of all possible languages
+lang_list_aggr = []
+for langs in lang_list_deepl + lang_list_google:
+    if langs.lower() not in lang_list_aggr:
+        lang_list_aggr.append(langs.lower())
+lang_list_aggr.sort()
+
 
 ##### SERVICE SETUP
 
@@ -190,10 +193,15 @@ class docparser(HTMLParser):
             for attr in attrs:
                 print(' {}="{}" '.format(attr[0], attr[1]), end='', file=outfile)
             print('>', file=outfile)
-            if hide_toolbar == False:
+            if hide_toolbar == False and body_exists == True:
                 render_toolbar(outfile)
         elif str('html') in tag.lower():
-            print('<html lang="{}">'.format(target_lang.lower()), end='', file=outfile)
+            if hide_toolbar == False and body_exists == True:
+                print('<html lang="{}">'.format(target_lang.lower()), end='', file=outfile)
+            else:
+                print('<html lang="{}">'.format(target_lang.lower()), end='', file=outfile)
+                if hide_toolbar == False:
+                    render_toolbar(outfile)
         else:
             print('<{}'.format(tag), end='', file=outfile)
             for attr in attrs:
@@ -202,7 +210,7 @@ class docparser(HTMLParser):
                     if attr[0] == str('href'):
                         if link_keyword in attr[1] or attr[1] == "/":
                             if qs_spec == True:
-                                print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot + '&lang=' + target_lang), end='', file=outfile)
+                                print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot + '&lang=' + target_lang + '&hide_toolbar=' + str(int(hide_toolbar))), end='', file=outfile)
                             else:
                                 print(' {}="{}" '.format(attr[0], thisscript + '?' + pagearg + '=' + attr[1] + docroot), end='', file=outfile)
                             stop = True
@@ -255,21 +263,40 @@ parser = docparser(convert_charrefs=True)
 ### render_toolbar
 #   Draws TranLang toolbar at the top of the page.
 #
-#   TODO: Finish this
 def render_toolbar(dest):
+    try:
+        request_page_qs = parse_qs(qs=os.environ.get('QUERY_STRING'), keep_blank_values=False, strict_parsing=False, encoding='utf-8', errors='replace', max_num_fields=None)
+        request_page = request_page_qs['page'][0]
+    except:
+        request_page = ''
+    try:
+        request_uri = os.environ.get('REQUEST_URI')
+        if 'hide_toolbar'.lower() not in request_uri.lower():
+            uri_with_hide = request_uri + '&hide_toolbar=1'
+        else:
+            uri_with_hide = request_uri.replace('hide_toolbar=0', 'hide_toolbar=1')
+    except:
+        uri_with_hide = docroot
+
+    if qs_spec == True:
+        display_lang = target_lang
+    else:
+        display_lang = accept_lang
+
     print('', file=dest)
     print('<!--Start tranlang Toolbar-->', file=dest)
     print('<div style="width: 100%; max-height: 10%;">', file=dest)
-    print('\t<h4>', end='', file=dest)
-    print('tranlang Toolbar', end='', file=dest)
-    print('</h4>', file=dest)
-    print('\t<h5>', end='', file=dest)
-    print('target_lang = "' + target_lang + '"<br>', end='', file=dest)
-    print('client_lang = "' + accept_lang + '"<br>', end='', file=dest)
-    print('translation_engine = "' + translation_engine + '"<br>', end='', file=dest)
-    print('page = "' + content[13:] + '"', end='', file=dest)
-    print('</h5>', file=dest)
+    print(' <p style="color:#333333; font-style:italic"> TranLang: [' + display_lang + '] &#8594', file=dest)
+    print('  <select name="sample" onchange="location = this.value;">', file=dest)
+    print('   <option value=""></option>', file=dest)
+    print('   <option value="' + thisscript + '?' + pagearg + '=' + request_page + '&lang=' + default_sourcelang + '">' + default_sourcelang + '</option>', file=dest)
+    for langs in lang_list_aggr:
+        print('   <option value="' + thisscript + '?' + pagearg + '=' + request_page + '&lang=' + langs + '">' + langs + '</option>', file=dest)
+    print(' </select>', file=dest)
+    print(' <a style="text-decoration: none" href="' + uri_with_hide  + '"> [ &#10005 ]</a>', file=dest)
+    print(' </p>', file=dest)
     print('</div>', file=dest)
+
     print('<!--End tranlang Toolbar-->', file=dest)
     print('', file=dest)
 
@@ -280,9 +307,13 @@ def render_toolbar(dest):
 #   of the requested content.  Read into memory.
 
 outfile = sys.stdout
-cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang.lower()
+if hide_toolbar == True:
+    toolbar_loaded = 'notool'
+else:
+    toolbar_loaded = 'wtool'
+cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang.lower() + toolbar_loaded
 if qs_spec == False:
-    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang.lower()
+    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang.lower() + toolbar_loaded
 
 cache_stale = False
 try:
@@ -307,6 +338,10 @@ if cache_available == True and content_available == True:
 l = f.read()
 f.close()
 
+body_exists = False
+for lines in l:
+    if '<body' in str(l):
+        body_exists = True
 
 ### Page rendering
 #   Renders a new HTML page for the user.  Digs out HTML <code> blocks, delivers HTTP headers to
