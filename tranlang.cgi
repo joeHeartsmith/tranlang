@@ -23,7 +23,7 @@
 #            Robots tool   - Generate robots.txt for all translation combinations
 #                            so web crawlers can index pre-translated content.
 #
-#  Version 0.2 (27 December 2021)
+#  Version 0.21 (28 December 2021)
 #
 
 import json, os, requests, sys
@@ -31,8 +31,9 @@ from html.parser import HTMLParser
 from urllib.parse import parse_qs
 
 ### Configuration
-deepl_api_auth_key = 'INVALID_API_KEY'                             # API key for DeepL Free/Pro
+deepl__auth_key = 'INVALID_API_KEY'                             # API key for DeepL Free/Pro
 google_api_auth_key = 'INVALID_API_KEY'                            # API key for Google Cloud Translate
+
 pathprefix = '/var/www/html/quickstart/public/'                    # Physical location on-disk for HTML content
 docroot = 'index.html'                                             # Default homepage to display when no content is requested
 pagearg = 'page'                                                   # URL Query String Parameter name to specify which page to supply
@@ -41,6 +42,7 @@ codeblock_flag = 'XXXPAGECODEFLAGXXX'                              # Keyword to 
 scrub_comments = False                                             # Option to remove comments from generated HTML content
 cachedir = 'tranlang-cache'                                        # Directory to store cache files in
 cachename_prefix = 'tr-cache_'                                     # String to prepend to cached filenames
+default_sourcelang = 'en'                                          # Default language to assume for source content not needing translation
 ###
 
 # List of available languages from DeepL.  Updated from https://www.deepl.com/docs-api/translating-text/
@@ -68,7 +70,7 @@ lang_list_google = ['af','sq','am','ar','hy','az','eu','be','bn','bs','bg','ca',
 #         to the server.  Works with Chrome.
 translation_engine = 'None'
 
-accept_lang = 'EN'
+accept_lang = default_sourcelang
 try:
     accept_lang_qs = os.environ.get('HTTP_ACCEPT_LANGUAGE')
     stop = False
@@ -95,7 +97,7 @@ try:
         else:
             stop = True
 except:
-    accept_lang = 'en'  # Should catch none or 'Accept-Language: *'
+    accept_lang = default_sourcelang  # Should catch none or 'Accept-Language: *'
 
 ### Fetch the requested page.  Try to prevent directory traversals,
 #   and just fetch the default document if unavailable.
@@ -120,7 +122,7 @@ try:
     if qs_lang.upper() in lang_list_deepl and 'INVALID' not in deepl_api_auth_key:
         translation_engine = 'DeepL'
 except:
-    qs_lang = 'EN'
+    qs_lang = default_sourcelang
     qs_spec = False
 target_lang = qs_lang
 
@@ -156,7 +158,7 @@ def translateText(source_string, target_lang):
     elif target_lang.lower() in lang_list_google and 'INVALID' not in google_api_auth_key:
         translation_engine = 'Google'
     else:
-        target_lang = 'EN'
+        target_lang = default_sourcelang
 
     if translation_engine == 'Google':
         auth_key = google_api_auth_key
@@ -183,8 +185,15 @@ def translateText(source_string, target_lang):
 #   within the TranLang environment.
 class docparser(HTMLParser):
     def handle_starttag(self, tag, attrs):
-        if str('html') in tag.lower():
-            print('', end='', file=outfile)
+        if str('body') in tag.lower():
+            print('<{}'.format(tag), end='', file=outfile)
+            for attr in attrs:
+                print(' {}="{}" '.format(attr[0], attr[1]), end='', file=outfile)
+            print('>', file=outfile)
+            if hide_toolbar == False:
+                render_toolbar(outfile)
+        elif str('html') in tag.lower():
+            print('<html lang="{}">'.format(target_lang.lower()), end='', file=outfile)
         else:
             print('<{}'.format(tag), end='', file=outfile)
             for attr in attrs:
@@ -217,9 +226,9 @@ class docparser(HTMLParser):
                 if target_lang.lower() not in lang_list_google:
                     notranslate = True
 
-            if accept_lang.upper() != 'EN' and qs_spec == False:
+            if accept_lang.upper() != default_sourcelang.upper() and qs_spec == False:
                 result = translateText(data, accept_lang)
-            elif target_lang.upper() == 'EN' or notranslate == True:
+            elif target_lang.upper() == default_sourcelang.upper() or notranslate == True:
                 result = data
             else:
                 result = translateText(data, target_lang)
@@ -228,19 +237,16 @@ class docparser(HTMLParser):
             print('{}'.format(data).replace(codeblock_flag, ''), end='', file=outfile)
 
     def handle_decl(self, data):
-        if str('DOCTYPE') in data:
-            print('', end='', file=outfile)
-        else:
-            print('<!{}>'.format(data), end='', file=outfile)
+        print('<!{}>'.format(data), end='', file=outfile)
 
     def handle_pi(self, data):
         print('<?{}>'.format(data), end='', file=outfile)
 
     def handle_comment(self, data):
         if scrub_comments == True:
-            print('<! COMMENT SCRUBBED -->', file=outfile)
+            print('<!--COMMENT SCRUBBED-->', file=outfile)
         else:
-            print('<! {}>'.format(data), end='', file=outfile)
+            print('<!--{}-->'.format(data), end='', file=outfile)
     def unknown_decl(self, data):
         print('<!{}>'.format(data), end='', file=outfile)
 
@@ -250,26 +256,22 @@ parser = docparser(convert_charrefs=True)
 #   Draws TranLang toolbar at the top of the page.
 #
 #   TODO: Finish this
-def render_toolbar():
-    print('<!DOCTYPE html>')
-    print('<html lang="' + target_lang + '">')
-    print()
-
-    print('<! Start tranlang Toolbar -->')
-    print('<div style="width: 100%; max-height: 10%;">')
-    print('\t<h4>', end='')
-    print('tranlang Toolbar', end='')
-    print('</h4>')
-    print('\t<h5>', end='')
-    print('target_lang = "' + target_lang + '"</br>', end='')
-    print('client_lang = "' + accept_lang + '"</br>', end='')
-    print('translation_engine = "' + translation_engine + '"</br>', end='')
-    print('cached = "' + str(cache_available) + '"</br>', end='')
-    print('page = "' + content[13:] + '"', end='')
-    print('</h5>')
-    print('</div>')
-    print('<! End tranlang Toolbar -->')
-    print()
+def render_toolbar(dest):
+    print('', file=dest)
+    print('<!--Start tranlang Toolbar-->', file=dest)
+    print('<div style="width: 100%; max-height: 10%;">', file=dest)
+    print('\t<h4>', end='', file=dest)
+    print('tranlang Toolbar', end='', file=dest)
+    print('</h4>', file=dest)
+    print('\t<h5>', end='', file=dest)
+    print('target_lang = "' + target_lang + '"<br>', end='', file=dest)
+    print('client_lang = "' + accept_lang + '"<br>', end='', file=dest)
+    print('translation_engine = "' + translation_engine + '"<br>', end='', file=dest)
+    print('page = "' + content[13:] + '"', end='', file=dest)
+    print('</h5>', file=dest)
+    print('</div>', file=dest)
+    print('<!--End tranlang Toolbar-->', file=dest)
+    print('', file=dest)
 
 ################################################################################
 
@@ -320,16 +322,12 @@ print('Server: tranlang.cgi')
 print()
 
 # Start HTML document
-print('<! Page Dynamically Translated to \'' + target_lang + '\' language/locality by tranlang.cgi -->')
+print('<!--Page Dynamically Translated to \'' + target_lang.lower() + '\' language/locality by tranlang.cgi-->')
 if 'INVALID' not in deepl_api_auth_key:
-    print('<!   Loaded API: DeepL Free/Pro           -->')
+    print('<!--Loaded API: DeepL Free/Pro-->')
 if 'INVALID' not in google_api_auth_key:
-    print('<!   Loaded API: Google Cloud Translate   -->')
+    print('<!--Loaded API: Google Cloud Translate-->')
 print()
-
-# Draw page Toolbar
-if hide_toolbar == False:
-    render_toolbar()
 
 # Check if cache file is available and if it's not stale, and render + deliver content
 if cache_available == False or cache_stale == True:
