@@ -311,9 +311,9 @@ if hide_toolbar == True:
     toolbar_loaded = 'notool'
 else:
     toolbar_loaded = 'wtool'
-cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang.lower() + toolbar_loaded
+cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + target_lang.lower() + '_' + toolbar_loaded
 if qs_spec == False:
-    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang.lower() + toolbar_loaded
+    cachefile = cachedir + '/' + cachename_prefix + qs_page.replace('/','_')[1:] + '_' + accept_lang.lower() + '_' + toolbar_loaded
 
 cache_stale = False
 try:
