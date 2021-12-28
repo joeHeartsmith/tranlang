@@ -40,7 +40,7 @@ lang_list_aggr.sort()  ### THIS IS A LOT OF DATA TO PROCESS/PAY FOR!  Uncomment
                          # the line below to process a customized language list
                          # instead.
 
-#lang_list_aggr = ['zh-CN', 'hi', 'es', 'fr', 'ar', 'bn', 'ru']
+#lang_list_aggr = ['zh', 'hi', 'es', 'fr', 'ar', 'bn', 'ru']
 
 srcpages = ['/index.html']
 for path in Path(contentpath).rglob('*.html'):
