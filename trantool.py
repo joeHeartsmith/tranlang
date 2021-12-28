@@ -36,7 +36,11 @@ lang_list_aggr = []
 for langs in lang_list_deepl + lang_list_google:
     if langs.lower() not in lang_list_aggr:
         lang_list_aggr.append(langs.lower())
-lang_list_aggr.sort()
+lang_list_aggr.sort()  ### THIS IS A LOT OF DATA TO PROCESS/PAY FOR!  Uncomment
+                         # the line below to process a customized language list
+                         # instead.
+
+#lang_list_aggr = ['zh-CN', 'hi', 'es', 'fr', 'ar', 'bn', 'ru']
 
 srcpages = ['/index.html']
 for path in Path(contentpath).rglob('*.html'):
