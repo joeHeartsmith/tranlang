@@ -11,7 +11,7 @@ generate_robots = True     # Generate XML Sitemap for robots.txt - very fast
 pretranslate_pages = True  # Visit all site pages in every language - very slow
 
 # Script options
-server_location = 'http://192.168.2.148/cgi-bin/tranlang.cgi'
+server_location = 'http://127.0.0.1/cgi-bin/tranlang.cgi'
 pathprefix = '/var/www/html/quickstart/public/'
 contentpath = pathprefix + 'posts/'
 sitemap_file = '/var/www/html/sitemap.xml'
