@@ -16,8 +16,6 @@
 #            at the top of the page to give them control over which language
 #            is presented.
 #
-#            Robots tool   - Generate robots.txt for all translation combinations
-#                            so web crawlers can index pre-translated content.
 #
 #  Version 0.9 (28 December 2021)
 #
