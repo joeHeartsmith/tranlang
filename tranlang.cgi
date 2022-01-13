@@ -66,9 +66,7 @@ lang_list_aggr.sort()
 ### Discover user's browser language preference.  Use the first preferred language that
 #   appears in the translation services for which the webmaster has an API key.  Fall
 #   back to English/no translation if no languages are available.
-#
-#   TODO: This doesn't really work with Firefox, as it just sends a bunch of 'en-US'
-#         to the server.  Works with Chrome.
+
 translation_engine = 'None'
 
 accept_lang = default_sourcelang
